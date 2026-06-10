@@ -179,4 +179,3 @@ document.head.appendChild(style);
 createRoot(document.getElementById("app")).render(
   React.createElement(App)
 );
-`
