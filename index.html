@@ -2,100 +2,11 @@
 <html>
 <head>
   <title>SafeRideSA</title>
+  <script type="module" src="/main.js"></script>
 </head>
 <body>
 
-  <h1>SafeRideSA 🚖</h1>
-
-  <h2>🔐 Auth</h2>
-
-  <input id="email" placeholder="Email" />
-  <input id="password" placeholder="Password" type="password" />
-
-  <button onclick="signup()">Sign Up</button>
-  <button onclick="login()">Login</button>
-
-  <h2>🚕 Book Ride</h2>
-
-  <input id="pickup" placeholder="Pickup location" />
-  <input id="dropoff" placeholder="Dropoff location" />
-
-  <button onclick="bookRide()">Book Ride</button>
-
-  <script>
-    const API = "https://saferide-backend-yqxz.onrender.com";
-
-    const SUPABASE_URL = "https://elzqihigxkravlpxsaqo.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_YOUR_KEY_HERE";
-
-    let token = null;
-
-    // ✅ SIGNUP
-    async function signup() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-      alert("Signup successful ✅");
-      console.log(data);
-    }
-
-    // ✅ LOGIN
-    async function login() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-
-      token = data.access_token;
-
-      alert("Logged in ✅");
-      console.log(data);
-    }
-
-    // ✅ BOOK RIDE (requires login)
-    async function bookRide() {
-      if (!token) {
-        alert("Please login first ❌");
-        return;
-      }
-
-      const pickup = document.getElementById("pickup").value;
-      const dropoff = document.getElementById("dropoff").value;
-
-      const res = await fetch(`${API}/trips`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ pickup, dropoff })
-      });
-
-      const data = await res.json();
-      alert("Ride booked ✅");
-      console.log(data);
-    }
-  </script>
+  <div id="app"></div>
 
 </body>
 </html>
-``
