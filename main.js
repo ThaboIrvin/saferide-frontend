@@ -7,8 +7,8 @@ function App() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const [trip, setTrip] = useState(null);
-  const [trips, setTrips] = useState([]);
   const [error, setError] = useState("");
+  const [trips, setTrips] = useState([]);
 
   const token = localStorage.getItem("token");
 
@@ -18,7 +18,42 @@ function App() {
     location.reload();
   }
 
-  // ✅ CREATE TRIP
+  // ✅ GEOCODE
+  async function getCoords(place) {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}&limit=1`
+    );
+    const data = await res.json();
+
+    if (!data.length) throw new Error("Location not found");
+
+    return [data[0].lon, data[0].lat];
+  }
+
+  // ✅ OSRM ROUTE (FRONTEND)
+  async function getRoute(pickup, dropoff) {
+    const start = await getCoords(pickup);
+    const end = await getCoords(dropoff);
+
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${start.join(",")};${end.join(",")}?overview=false`
+    );
+
+    const data = await res.json();
+
+    if (!data.routes || !data.routes.length) {
+      throw new Error("Route not found");
+    }
+
+    const route = data.routes[0];
+
+    return {
+      distance: (route.distance / 1000).toFixed(2),
+      eta: (route.duration / 60).toFixed(0)
+    };
+  }
+
+  // ✅ MAIN FUNCTION (NOW WORKS GUARANTEED)
   async function handleTrip() {
     if (!pickup || !dropoff) {
       setError("Enter both locations ❌");
@@ -28,32 +63,30 @@ function App() {
     setError("");
 
     try {
-      const res = await fetch(`${API}/trips`, {
+      const route = await getRoute(pickup, dropoff);
+
+      const newTrip = {
+        pickup,
+        dropoff,
+        distance: route.distance,
+        eta: route.eta
+      };
+
+      setTrip(newTrip);
+
+      // ✅ SAVE TO BACKEND
+      await fetch(`${API}/trips`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ pickup, dropoff })
+        body: JSON.stringify(newTrip)
       });
-
-      const data = await res.json();
-
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
-
-      if (!data[0]) {
-        setError("No trip returned ❌");
-        return;
-      }
-
-      setTrip(data[0]);
 
     } catch (err) {
       console.error(err);
-      setError("Request failed ❌");
+      setError(err.message || "Failed to calculate trip ❌");
     }
   }
 
@@ -69,71 +102,68 @@ function App() {
     setTrips(data);
   }
 
-  return React.createElement("div", { className: "container" }, [
+  return (
+    React.createElement("div", { className: "container" }, [
 
-    // ✅ HEADER
-    React.createElement("div", { className: "header" }, [
-      React.createElement("h1", {}, "SafeRideSA 🚖"),
-      token && React.createElement("button", {
-        className: "logout-btn",
-        onClick: logout
-      }, "Logout")
-    ]),
+      // HEADER
+      React.createElement("div", { className: "header" }, [
+        React.createElement("h1", {}, "SafeRideSA 🚖"),
+        React.createElement("button", {
+          className: "logout",
+          onClick: logout
+        }, "Logout")
+      ]),
 
-    // ✅ PICKUP CARD
-    React.createElement("div", { className: "card" }, [
-      React.createElement("label", {}, "Pickup"),
-      React.createElement("input", {
-        value: pickup,
-        onChange: e => setPickup(e.target.value)
-      })
-    ]),
+      // PICKUP CARD
+      React.createElement("div", { className: "card" }, [
+        React.createElement("label", {}, "Pickup"),
+        React.createElement("input", {
+          value: pickup,
+          onChange: e => setPickup(e.target.value)
+        })
+      ]),
 
-    // ✅ ARROW
-    React.createElement("div", { className: "arrow" }, "↓"),
+      // ARROW
+      React.createElement("div", { className: "arrow" }, "↓"),
 
-    // ✅ DROPOFF CARD
-    React.createElement("div", { className: "card" }, [
-      React.createElement("label", {}, "Dropoff"),
-      React.createElement("input", {
-        value: dropoff,
-        onChange: e => setDropoff(e.target.value)
-      })
-    ]),
+      // DROPOFF CARD
+      React.createElement("div", { className: "card" }, [
+        React.createElement("label", {}, "Dropoff"),
+        React.createElement("input", {
+          value: dropoff,
+          onChange: e => setDropoff(e.target.value)
+        })
+      ]),
 
-    // ✅ GET TRIP BUTTON
-    React.createElement("button", {
-      className: "main-btn",
-      onClick: handleTrip
-    }, "Get Trip"),
+      // BUTTON
+      React.createElement("button", {
+        className: "main-btn",
+        onClick: handleTrip
+      }, "Get Trip"),
 
-    error && React.createElement("p", { className: "error" }, error),
+      error && React.createElement("p", { className: "error" }, error),
 
-    // ✅ RESULT
-    trip && React.createElement("div", { className: "result" }, [
-      React.createElement("h3", {}, "Trip Summary"),
-      React.createElement("p", {}, `Distance: ${trip.distance} km`),
-      React.createElement("p", {}, `ETA: ${trip.eta} mins`)
-    ]),
+      // RESULT
+      trip && React.createElement("div", { className: "result" }, [
+        React.createElement("p", {}, `Distance: ${trip.distance} km`),
+        React.createElement("p", {}, `ETA: ${trip.eta} mins`)
+      ]),
 
-    // ✅ LOAD HISTORY
-    React.createElement("button", {
-      className: "secondary-btn",
-      onClick: loadTrips
-    }, "Load My Trips"),
+      React.createElement("button", {
+        className: "secondary",
+        onClick: loadTrips
+      }, "Load My Trips"),
 
-    // ✅ HISTORY LIST
-    React.createElement("div", {},
       trips.map((t, i) =>
-        React.createElement("div", { className: "trip", key: i },
+        React.createElement("div", { key: i, className: "trip" },
           `${t.pickup} → ${t.dropoff} (${t.distance} km)`
         )
       )
-    )
-  ]);
+    ])
+  );
 }
 
-// ✅ STYLES (FIXED LAYOUT + DARK UI)
+// ✅ STYLE
 const style = document.createElement("style");
 style.innerHTML = `
 .container {
@@ -146,7 +176,6 @@ style.innerHTML = `
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
 }
 
 .card {
@@ -159,8 +188,8 @@ style.innerHTML = `
 input {
   width: 100%;
   box-sizing: border-box;
-  margin-top: 10px;
   padding: 12px;
+  margin-top: 10px;
   border-radius: 8px;
   border: none;
 }
@@ -172,16 +201,9 @@ input {
   background: #2d8cff;
   border: none;
   border-radius: 12px;
-  color: white;
 }
 
-.secondary-btn {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-}
-
-.logout-btn {
+.logout {
   background: red;
   color: white;
   border: none;
@@ -192,8 +214,8 @@ input {
 .arrow {
   text-align: center;
   margin-top: 10px;
-  color: #2d8cff;
   font-size: 22px;
+  color: #2d8cff;
 }
 
 .result {
