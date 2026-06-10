@@ -14,71 +14,129 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [trips, setTrips] = useState([]);
 
+  // ✅ SIGNUP (FIXED)
   async function signup() {
-    await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_KEY
-      },
-      body: JSON.stringify({ email, password })
-    });
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY
+        },
+        body: JSON.stringify({ email, password })
+      });
 
-    alert("Signup ✅");
-  }
+      const data = await res.json();
 
-  async function login() {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_KEY
-      },
-      body: JSON.stringify({ email, password })
-    });
+      console.log("Signup response:", data);
 
-    const data = await res.json();
-    localStorage.setItem("token", data.access_token);
-    setToken(data.access_token);
-
-    alert("Login ✅");
-  }
-
-  async function bookRide() {
-    if (!token) return alert("Login first ❌");
-
-    await fetch(`${API}/trips`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ pickup, dropoff })
-    });
-
-    alert("Ride booked ✅");
-  }
-
-  async function loadTrips() {
-    const res = await fetch(`${API}/my-trips`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+      if (data.error) {
+        alert("Signup failed ❌: " + data.error.message);
+        return;
       }
-    });
 
-    const data = await res.json();
-    setTrips(data);
+      alert("Signup successful ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Signup error ❌");
+    }
+  }
+
+  // ✅ LOGIN (FIXED)
+  async function login() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      console.log("Login response:", data);
+
+      if (data.error) {
+        alert("Login failed ❌: " + data.error.message);
+        return;
+      }
+
+      localStorage.setItem("token", data.access_token);
+      setToken(data.access_token);
+
+      alert("Login successful ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Login error ❌");
+    }
+  }
+
+  // ✅ BOOK RIDE
+  async function bookRide() {
+    if (!token) {
+      alert("Please login first ❌");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/trips`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ pickup, dropoff })
+      });
+
+      const data = await res.json();
+      console.log("Trip response:", data);
+
+      alert("Ride booked ✅");
+    } catch (err) {
+      console.error(err);
+      alert("Booking failed ❌");
+    }
+  }
+
+  // ✅ LOAD TRIPS
+  async function loadTrips() {
+    if (!token) {
+      alert("Login first ❌");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/my-trips`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await res.json();
+
+      console.log("Trips:", data);
+
+      setTrips(data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load trips ❌");
+    }
   }
 
   return (
-    React.createElement("div", { style: { padding: "20px" } }, [
+    React.createElement("div", { style: { padding: "20px", fontFamily: "Arial" } }, [
+
       React.createElement("h1", {}, "SafeRideSA 🚖"),
 
-      React.createElement("h2", {}, "Auth"),
+      React.createElement("h2", {}, "🔐 Auth"),
+
       React.createElement("input", {
         placeholder: "Email",
         onChange: e => setEmail(e.target.value)
       }),
+
       React.createElement("input", {
         placeholder: "Password",
         type: "password",
@@ -86,21 +144,30 @@ function App() {
       }),
 
       React.createElement("br"),
-      React.createElement("button", { onClick: signup }, "Signup"),
+      React.createElement("br"),
+
+      React.createElement("button", { onClick: signup }, "Sign Up"),
       React.createElement("button", { onClick: login }, "Login"),
 
-      React.createElement("h2", {}, "Book Ride"),
+      React.createElement("h2", {}, "🚕 Book Ride"),
+
       React.createElement("input", {
         placeholder: "Pickup",
         onChange: e => setPickup(e.target.value)
       }),
+
       React.createElement("input", {
         placeholder: "Dropoff",
         onChange: e => setDropoff(e.target.value)
       }),
-      React.createElement("button", { onClick: bookRide }, "Book"),
 
-      React.createElement("h2", {}, "My Trips"),
+      React.createElement("br"),
+      React.createElement("br"),
+
+      React.createElement("button", { onClick: bookRide }, "Book Ride"),
+
+      React.createElement("h2", {}, "📋 My Trips"),
+
       React.createElement("button", { onClick: loadTrips }, "Load Trips"),
 
       React.createElement(
@@ -114,9 +181,11 @@ function App() {
           )
         )
       )
+
     ])
   );
 }
 
-createRoot(document.getElementById("app")).render(React.createElement(App));
-``
+createRoot(document.getElementById("app")).render(
+  React.createElement(App)
+);
