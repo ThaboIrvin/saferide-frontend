@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from "https://esm.sh/react";
 import { createRoot } from "https://esm.sh/react-dom/client";
 
-// ✅ CONFIG
-const API = "https://saferide-backend-yqxz.onrender.com";
 const SUPABASE_URL = "https://elzqihigxkravlpxsaqo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Kqgqr2VHU9jXf24L-sU9Ew_MVOIZQc7";
 
 function App() {
-
-  // ✅ STATE
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pickup, setPickup] = useState("");
@@ -16,25 +12,14 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [userEmail, setUserEmail] = useState("");
 
-  // ✅ INIT MAP AFTER LOAD
+  // ✅ Load user on login
   useEffect(() => {
-    if (token) loadUser();
-    setTimeout(initMap, 500);
-  }, []);
+    if (token) {
+      fetchUser();
+    }
+  }, [token]);
 
-  // ✅ INITIALIZE MAP
-  function initMap() {
-    if (window.map) return;
-
-    window.map = L.map("map").setView([-26.2041, 28.0473], 10); // Johannesburg
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap"
-    }).addTo(window.map);
-  }
-
-  // ✅ LOAD USER EMAIL
-  async function loadUser() {
+  async function fetchUser() {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -46,7 +31,7 @@ function App() {
     if (data.email) setUserEmail(data.email);
   }
 
-  // ✅ LOGIN
+  // ✅ Login
   async function login() {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
@@ -66,19 +51,16 @@ function App() {
 
     localStorage.setItem("token", data.access_token);
     setToken(data.access_token);
-
-    alert("Login successful ✅");
   }
 
-  // ✅ LOGOUT
   function logout() {
     localStorage.removeItem("token");
     setToken(null);
     setUserEmail("");
   }
 
-  // ✅ CONVERT ADDRESS → COORDINATES
-  async function getCoordinates(place) {
+  // ✅ Convert location → coordinates
+  async function getCoords(place) {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${place}`
     );
@@ -93,77 +75,124 @@ function App() {
     return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
   }
 
-  // ✅ SHOW MAP MARKERS
-  async function showLocations() {
+  // ✅ Show map correctly
+  async function showMap() {
     if (!pickup || !dropoff) {
-      alert("Enter both locations ❌");
+      alert("Enter both locations");
       return;
     }
 
-    const p = await getCoordinates(pickup);
-    const d = await getCoordinates(dropoff);
+    const p = await getCoords(pickup);
+    const d = await getCoords(dropoff);
 
     if (!p || !d) return;
 
-    window.map.setView(p, 12);
+    // ✅ Recreate map fresh each time
+    if (window.map) {
+      window.map.remove();
+    }
 
-    L.marker(p).addTo(window.map).bindPopup("Pickup").openPopup();
-    L.marker(d).addTo(window.map).bindPopup("Dropoff");
+    const map = L.map("map").setView(p, 12);
+    window.map = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    L.marker(p).addTo(map).bindPopup("Pickup").openPopup();
+    L.marker(d).addTo(map).bindPopup("Dropoff");
   }
 
-  // ✅ UI
-  return React.createElement("div", { style: { padding: "20px" } }, [
+  return React.createElement("div", { className: "container" }, [
 
-    React.createElement("h1", {}, "SafeRideSA 🚖"),
+    // ✅ Header
+    React.createElement("div", { className: "header" }, [
+      React.createElement("h1", {}, "SafeRideSA 🚖"),
 
-    token
-      ? React.createElement("div", {}, [
+      token && React.createElement("div", {}, [
+        React.createElement("span", {}, userEmail),
+        React.createElement("button", { onClick: logout }, "Logout")
+      ])
+    ]),
 
-          // ✅ USER PANEL
-          React.createElement("div", {}, [
-            React.createElement("span", {}, "Logged in: " + userEmail),
-            React.createElement("button", {
-              onClick: logout,
-              style: { marginLeft: "10px" }
-            }, "Logout")
-          ]),
+    // ✅ Login
+    !token && React.createElement("div", { className: "card" }, [
+      React.createElement("input", {
+        placeholder: "Email",
+        onChange: e => setEmail(e.target.value)
+      }),
 
-          React.createElement("h2", {}, "Enter Trip"),
+      React.createElement("input", {
+        type: "password",
+        placeholder: "Password",
+        onChange: e => setPassword(e.target.value)
+      }),
 
-          React.createElement("input", {
-            placeholder: "Pickup location",
-            onChange: e => setPickup(e.target.value)
-          }),
+      React.createElement("button", { onClick: login }, "Login")
+    ]),
 
-          React.createElement("input", {
-            placeholder: "Dropoff location",
-            onChange: e => setDropoff(e.target.value)
-          }),
+    // ✅ Dashboard
+    token && React.createElement("div", { className: "card" }, [
+      React.createElement("h2", {}, "Plan Trip"),
 
-          React.createElement("button", { onClick: showLocations }, "Show on Map"),
+      React.createElement("input", {
+        placeholder: "Pickup location",
+        onChange: e => setPickup(e.target.value)
+      }),
 
-          // ✅ MAP
-          React.createElement("div", { id: "map" })
-        ])
+      React.createElement("input", {
+        placeholder: "Dropoff location",
+        onChange: e => setDropoff(e.target.value)
+      }),
 
-      : React.createElement("div", {}, [
+      React.createElement("button", { onClick: showMap }, "Show Map"),
 
-          React.createElement("input", {
-            placeholder: "Email",
-            onChange: e => setEmail(e.target.value)
-          }),
-
-          React.createElement("input", {
-            placeholder: "Password",
-            type: "password",
-            onChange: e => setPassword(e.target.value)
-          }),
-
-          React.createElement("button", { onClick: login }, "Login")
-        ])
+      React.createElement("div", { id: "map" })
+    ])
   ]);
 }
 
+// ✅ Styles (keeps polished UI)
+const style = document.createElement("style");
+style.innerHTML = `
+.container {
+  max-width: 500px;
+  margin: auto;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  background: #2d8cff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+}
+`;
+document.head.appendChild(style);
+
+// ✅ Render app
 createRoot(document.getElementById("app")).render(
   React.createElement(App)
 );
