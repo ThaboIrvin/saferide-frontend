@@ -36,6 +36,7 @@ function App() {
 
   // ✅ LOGIN
   async function login() {
+  try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: {
@@ -47,17 +48,27 @@ function App() {
 
     const data = await res.json();
 
-    if (data.error) {
-      alert("Login failed ❌: " + data.error.message);
+    console.log("LOGIN RESPONSE:", data);
+
+    // ✅ STRICT CHECK
+    if (!data.access_token) {
+      alert("Login failed ❌: Invalid email or password");
       return;
     }
 
+    // ✅ SUCCESS
     localStorage.setItem("token", data.access_token);
     setToken(data.access_token);
     setUserEmail(email);
 
     alert("Login successful ✅");
+
+  } catch (err) {
+    console.error(err);
+    alert("Login error ❌");
   }
+}
+
 
   // ✅ LOGOUT
   function logout() {
