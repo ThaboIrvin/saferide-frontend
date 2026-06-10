@@ -1,6 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SafeRideSA</title>
+</head>
+<body>
+  <h1>SafeRideSA 🚖</h1>
 
-<script>
-fetch("https://saferide-backend-yqxz.onrender.com/")
-  .then(res => res.json())
-  .then(data => console.log(data));
-</script>
+  <h3>Register User</h3>
+  <input id="name" placeholder="Name" />
+  <input id="email" placeholder="Email" />
+  <button onclick="register()">Register</button>
+
+  <h3>Book Ride</h3>
+  <input id="pickup" placeholder="Pickup" />
+  <input id="dropoff" placeholder="Dropoff" />
+  <button onclick="bookRide()">Book</button>
+
+  <script>
+    const API = "https://jwjrtkzdsumfxokxdver.supabase.co/rest/v1/";
+
+    async function register() {
+      const res = await fetch(`${API}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: document.getElementById("name").value,
+          email: document.getElementById("email").value
+        })
+      });
+      alert("User registered!");
+    }
+
+    async function bookRide() {
+      const res = await fetch(`${API}/trips`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pickup: document.getElementById("pickup").value,
+          dropoff: document.getElementById("dropoff").value
+        })
+      });
+      alert("Ride booked!");
+    }
+  </script>
+</body>
+</html>
+``
