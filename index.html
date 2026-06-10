@@ -3,8 +3,12 @@
 <head>
   <title>SafeRideSA</title>
 
-  <!-- ✅ CORRECT Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.   margin: 0;
+  <!-- ✅ Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    body {
+      margin: 0;
       font-family: Arial, sans-serif;
       background: #f4f6f8;
     }
@@ -18,13 +22,15 @@
 </head>
 <body>
 
+  <!-- ✅ React mounts here -->
   <div id="app"></div>
 
-  <!-- ✅ CORRECT Leaflet JS -->
-  https://unpkg.com/leaflet/dist/leaflet.js
+  <!-- ✅ Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-  <!-- ✅ IMPORTANT: load your React app -->
-  ./main.js</script>
+  <!-- ✅ THIS IS THE MOST IMPORTANT LINE -->
+  <script type="module" src="./main.js"></script>
 
 </body>
 </html>
+`
