@@ -4,45 +4,98 @@
   <title>SafeRideSA</title>
 </head>
 <body>
+
   <h1>SafeRideSA 🚖</h1>
 
-  <h3>Register User</h3>
-  <input id="name" placeholder="Name" />
-  <input id="email" placeholder="Email" />
-  <button onclick="register()">Register</button>
+  <h2>🔐 Auth</h2>
 
-  <h3>Book Ride</h3>
-  <input id="pickup" placeholder="Pickup" />
-  <input id="dropoff" placeholder="Dropoff" />
-  <button onclick="bookRide()">Book</button>
+  <input id="email" placeholder="Email" />
+  <input id="password" placeholder="Password" type="password" />
+
+  <button onclick="signup()">Sign Up</button>
+  <button onclick="login()">Login</button>
+
+  <h2>🚕 Book Ride</h2>
+
+  <input id="pickup" placeholder="Pickup location" />
+  <input id="dropoff" placeholder="Dropoff location" />
+
+  <button onclick="bookRide()">Book Ride</button>
 
   <script>
-    const API = "https://saferide-backend-yqxz.onrender.com" ;
+    const API = "https://saferide-backend-yqxz.onrender.com";
 
-    async function register() {
-      const res = await fetch(`${API}/users`, {
+    const SUPABASE_URL = "https://elzqihigxkravlpxsaqo.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_YOUR_KEY_HERE";
+
+    let token = null;
+
+    // ✅ SIGNUP
+    async function signup() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: document.getElementById("name").value,
-          email: document.getElementById("email").value
-        })
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY
+        },
+        body: JSON.stringify({ email, password })
       });
-      alert("User registered!");
+
+      const data = await res.json();
+      alert("Signup successful ✅");
+      console.log(data);
     }
 
+    // ✅ LOGIN
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_KEY
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      token = data.access_token;
+
+      alert("Logged in ✅");
+      console.log(data);
+    }
+
+    // ✅ BOOK RIDE (requires login)
     async function bookRide() {
+      if (!token) {
+        alert("Please login first ❌");
+        return;
+      }
+
+      const pickup = document.getElementById("pickup").value;
+      const dropoff = document.getElementById("dropoff").value;
+
       const res = await fetch(`${API}/trips`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pickup: document.getElementById("pickup").value,
-          dropoff: document.getElementById("dropoff").value
-        })
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ pickup, dropoff })
       });
-      alert("Ride booked!");
+
+      const data = await res.json();
+      alert("Ride booked ✅");
+      console.log(data);
     }
   </script>
+
 </body>
 </html>
 ``
