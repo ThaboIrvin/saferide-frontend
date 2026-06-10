@@ -6,43 +6,44 @@ const API = "https://saferide-backend-yqxz.onrender.com";
 function App() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
+  const [trip, setTrip] = useState(null);
   const [trips, setTrips] = useState([]);
+  const [error, setError] = useState("");
 
   const token = localStorage.getItem("token");
 
-  // ✅ Fake distance (temporary)
-  function calculateDistance() {
+  // ✅ LOGOUT
+  function logout() {
+    localStorage.removeItem("token");
+    window.location.reload();
+  }
+
+  // ✅ CREATE TRIP (REAL DISTANCE NOW)
+  async function handleTrip() {
     if (!pickup || !dropoff) {
       setError("Enter both locations ❌");
       return;
     }
 
-    const distance = (Math.random() * 15 + 5).toFixed(2);
-    const eta = (distance / 40 * 60).toFixed(0);
-
-    const trip = { pickup, dropoff, distance, eta };
-
-    setResult(trip);
     setError("");
 
-    saveTrip(trip); // ✅ SAVE TO DB
-  }
-
-  // ✅ SAVE TRIP TO BACKEND
-  async function saveTrip(trip) {
-    await fetch(`${API}/trips`, {
+    const res = await fetch(`${API}/trips`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify(trip)
+      body: JSON.stringify({ pickup, dropoff })
     });
+
+    const data = await res.json();
+
+    if (data && data[0]) {
+      setTrip(data[0]);
+    }
   }
 
-  // ✅ LOAD TRIPS
+  // ✅ LOAD HISTORY
   async function loadTrips() {
     const res = await fetch(`${API}/my-trips`, {
       headers: {
@@ -56,7 +57,14 @@ function App() {
 
   return React.createElement("div", { className: "container" }, [
 
-    React.createElement("h1", {}, "SafeRideSA 🚖"),
+    // ✅ HEADER WITH RED LOGOUT
+    React.createElement("div", { className: "header" }, [
+      React.createElement("h1", {}, "SafeRideSA 🚖"),
+      React.createElement("button", {
+        className: "logout-btn",
+        onClick: logout
+      }, "Logout")
+    ]),
 
     // ✅ PICKUP CARD
     React.createElement("div", { className: "card" }, [
@@ -82,16 +90,16 @@ function App() {
     // ✅ BUTTON
     React.createElement("button", {
       className: "main-btn",
-      onClick: calculateDistance
-    }, "Calculate Trip"),
+      onClick: handleTrip
+    }, "Get Trip"),
 
     error && React.createElement("p", { className: "error" }, error),
 
-    // ✅ RESULT
-    result && React.createElement("div", { className: "result" }, [
+    // ✅ TRIP RESULT
+    trip && React.createElement("div", { className: "result" }, [
       React.createElement("h3", {}, "Trip Summary"),
-      React.createElement("p", {}, `Distance: ${result.distance} km`),
-      React.createElement("p", {}, `ETA: ${result.eta} mins`)
+      React.createElement("p", {}, `Distance: ${trip.distance} km`),
+      React.createElement("p", {}, `ETA: ${trip.eta} mins`)
     ]),
 
     // ✅ LOAD HISTORY
@@ -100,10 +108,9 @@ function App() {
       onClick: loadTrips
     }, "Load My Trips"),
 
-    // ✅ HISTORY LIST
     React.createElement("div", {},
       trips.map((t, i) =>
-        React.createElement("div", { key: i, className: "trip" },
+        React.createElement("div", { className: "trip", key: i },
           `${t.pickup} → ${t.dropoff} (${t.distance}km)`
         )
       )
@@ -111,7 +118,7 @@ function App() {
   ]);
 }
 
-/* ✅ UI FIXED */
+/* ✅ MODERN DARK UI */
 const style = document.createElement("style");
 style.innerHTML = `
 .container {
@@ -119,6 +126,12 @@ style.innerHTML = `
   margin: auto;
   padding: 20px;
   color: white;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .card {
@@ -153,11 +166,19 @@ input {
   padding: 10px;
 }
 
+.logout-btn {
+  background: red;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+}
+
 .arrow {
   text-align: center;
-  font-size: 22px;
   margin-top: 10px;
   color: #2d8cff;
+  font-size: 22px;
 }
 
 .result {
