@@ -3,14 +3,20 @@
 <head>
   <title>SafeRideSA</title>
 
-  <!-- ✅ SIMPLE MODERN FONT -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- ✅ Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
     body {
       margin: 0;
-      font-family: 'Inter', sans-serif;
+      font-family: Arial, sans-serif;
       background: #f4f6f8;
+    }
+
+    #map {
+      height: 300px;
+      margin-top: 20px;
+      border-radius: 10px;
     }
   </style>
 </head>
@@ -18,8 +24,11 @@
 
   <div id="app"></div>
 
+  <!-- ✅ Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- ✅ Your React App -->
   <script type="module" src="./main.js"></script>
 
 </body>
 </html>
-`

@@ -7,6 +7,7 @@ const SUPABASE_URL = "https://elzqihigxkravlpxsaqo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Kqgqr2VHU9jXf24L-sU9Ew_MVOIZQc7";
 
 function App() {
+
   // ✅ STATE
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,16 +15,26 @@ function App() {
   const [dropoff, setDropoff] = useState("");
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [userEmail, setUserEmail] = useState("");
-  const [trips, setTrips] = useState([]);
 
-  // ✅ LOAD USER ON REFRESH
+  // ✅ INIT MAP AFTER LOAD
   useEffect(() => {
-    if (token) {
-      fetchUser();
-    }
+    if (token) loadUser();
+    setTimeout(initMap, 500);
   }, []);
 
-  async function fetchUser() {
+  // ✅ INITIALIZE MAP
+  function initMap() {
+    if (window.map) return;
+
+    window.map = L.map("map").setView([-26.2041, 28.0473], 10); // Johannesburg
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap"
+    }).addTo(window.map);
+  }
+
+  // ✅ LOAD USER EMAIL
+  async function loadUser() {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -32,30 +43,7 @@ function App() {
     });
 
     const data = await res.json();
-
-    if (data.email) {
-      setUserEmail(data.email);
-    }
-  }
-
-  // ✅ SIGNUP
-  async function signup() {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: SUPABASE_KEY
-      },
-      body: JSON.stringify({ email, password })
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      alert("Signup failed ❌: " + data.error.message);
-    } else {
-      alert("Signup successful ✅");
-    }
+    if (data.email) setUserEmail(data.email);
   }
 
   // ✅ LOGIN
@@ -72,13 +60,12 @@ function App() {
     const data = await res.json();
 
     if (!data.access_token) {
-      alert("Invalid email or password ❌");
+      alert("Login failed ❌");
       return;
     }
 
     localStorage.setItem("token", data.access_token);
     setToken(data.access_token);
-    setUserEmail(email);
 
     alert("Login successful ✅");
   }
@@ -88,170 +75,95 @@ function App() {
     localStorage.removeItem("token");
     setToken(null);
     setUserEmail("");
-    setTrips([]);
   }
 
-  // ✅ BOOK RIDE
-  async function bookRide() {
-    if (!token) {
-      alert("Please login first ❌");
+  // ✅ CONVERT ADDRESS → COORDINATES
+  async function getCoordinates(place) {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${place}`
+    );
+
+    const data = await res.json();
+
+    if (!data[0]) {
+      alert("Location not found ❌");
+      return null;
+    }
+
+    return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  }
+
+  // ✅ SHOW MAP MARKERS
+  async function showLocations() {
+    if (!pickup || !dropoff) {
+      alert("Enter both locations ❌");
       return;
     }
 
-    await fetch(`${API}/trips`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ pickup, dropoff })
-    });
+    const p = await getCoordinates(pickup);
+    const d = await getCoordinates(dropoff);
 
-    alert("Ride booked ✅");
-  }
+    if (!p || !d) return;
 
-  // ✅ LOAD TRIPS
-  async function loadTrips() {
-    const res = await fetch(`${API}/my-trips`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    window.map.setView(p, 12);
 
-    const data = await res.json();
-    setTrips(data);
+    L.marker(p).addTo(window.map).bindPopup("Pickup").openPopup();
+    L.marker(d).addTo(window.map).bindPopup("Dropoff");
   }
 
   // ✅ UI
-  return (
-    React.createElement("div", { className: "container" }, [
+  return React.createElement("div", { style: { padding: "20px" } }, [
 
-      // ✅ HEADER
-      React.createElement("div", { className: "header" }, [
-        React.createElement("h1", {}, "SafeRideSA 🚖"),
+    React.createElement("h1", {}, "SafeRideSA 🚖"),
 
-        token && React.createElement("div", { className: "user" }, [
-          React.createElement("span", {}, userEmail),
-          React.createElement("button", { onClick: logout }, "Logout")
+    token
+      ? React.createElement("div", {}, [
+
+          // ✅ USER PANEL
+          React.createElement("div", {}, [
+            React.createElement("span", {}, "Logged in: " + userEmail),
+            React.createElement("button", {
+              onClick: logout,
+              style: { marginLeft: "10px" }
+            }, "Logout")
+          ]),
+
+          React.createElement("h2", {}, "Enter Trip"),
+
+          React.createElement("input", {
+            placeholder: "Pickup location",
+            onChange: e => setPickup(e.target.value)
+          }),
+
+          React.createElement("input", {
+            placeholder: "Dropoff location",
+            onChange: e => setDropoff(e.target.value)
+          }),
+
+          React.createElement("button", { onClick: showLocations }, "Show on Map"),
+
+          // ✅ MAP
+          React.createElement("div", { id: "map" })
         ])
-      ]),
 
-      // ✅ LOGIN / SIGNUP
-      !token && React.createElement("div", { className: "card" }, [
-        React.createElement("h2", {}, "Login or Sign Up"),
+      : React.createElement("div", {}, [
 
-        React.createElement("input", {
-          placeholder: "Email",
-          onChange: e => setEmail(e.target.value)
-        }),
+          React.createElement("input", {
+            placeholder: "Email",
+            onChange: e => setEmail(e.target.value)
+          }),
 
-        React.createElement("input", {
-          placeholder: "Password",
-          type: "password",
-          onChange: e => setPassword(e.target.value)
-        }),
+          React.createElement("input", {
+            placeholder: "Password",
+            type: "password",
+            onChange: e => setPassword(e.target.value)
+          }),
 
-        React.createElement("button", { onClick: login }, "Login"),
-        React.createElement("button", { onClick: signup }, "Sign Up")
-      ]),
-
-      // ✅ DASHBOARD (when logged in)
-      token && React.createElement("div", { className: "card" }, [
-        React.createElement("h2", {}, "Book a Ride"),
-
-        React.createElement("input", {
-          placeholder: "Pickup location",
-          onChange: e => setPickup(e.target.value)
-        }),
-
-        React.createElement("input", {
-          placeholder: "Dropoff location",
-          onChange: e => setDropoff(e.target.value)
-        }),
-
-        React.createElement("button", { onClick: bookRide }, "Book Ride"),
-
-        React.createElement("h3", {}, "My Trips"),
-        React.createElement("button", { onClick: loadTrips }, "Refresh Trips"),
-
-        React.createElement(
-          "div",
-          {},
-          trips.map((trip, index) =>
-            React.createElement(
-              "div",
-              { key: index, className: "trip" },
-              `${trip.pickup} → ${trip.dropoff}`
-            )
-          )
-        )
-      ])
-    ])
-  );
+          React.createElement("button", { onClick: login }, "Login")
+        ])
+  ]);
 }
 
-// ✅ MODERN STYLING
-const style = document.createElement("style");
-style.innerHTML = `
-.container {
-  max-width: 500px;
-  margin: auto;
-  padding: 20px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.user {
-  display: flex;
-  gap: 10px;
-}
-
-.card {
-  background: white;
-  padding: 20px;
-  margin-top: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 8px;
-  background: #2d8cff;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #1f6fe0;
-}
-
-.trip {
-  background: #f0f4ff;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 6px;
-}
-`;
-document.head.appendChild(style);
-
-// ✅ RENDER APP
 createRoot(document.getElementById("app")).render(
   React.createElement(App)
 );
