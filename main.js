@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "https://esm.sh/react";
 import { createRoot } from "https://esm.sh/react-dom/client";
 
+// ✅ CONFIG
 const API = "https://saferide-backend-yqxz.onrender.com";
 const SUPABASE_URL = "https://elzqihigxkravlpxsaqo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Kqgqr2VHU9jXf24L-sU9Ew_MVOIZQc7";
 
 function App() {
+  // ✅ STATE
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pickup, setPickup] = useState("");
@@ -14,7 +16,7 @@ function App() {
   const [userEmail, setUserEmail] = useState("");
   const [trips, setTrips] = useState([]);
 
-  // ✅ AUTO-LOAD USER (NEW)
+  // ✅ LOAD USER ON REFRESH
   useEffect(() => {
     if (token) {
       fetchUser();
@@ -22,24 +24,17 @@ function App() {
   }, []);
 
   async function fetchUser() {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: SUPABASE_KEY
-        }
-      });
-
-      const data = await res.json();
-
-      if (data && data.email) {
-        setUserEmail(data.email);
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_KEY
       }
+    });
 
-      console.log("USER:", data);
+    const data = await res.json();
 
-    } catch (err) {
-      console.error(err);
+    if (data.email) {
+      setUserEmail(data.email);
     }
   }
 
@@ -76,10 +71,8 @@ function App() {
 
     const data = await res.json();
 
-    console.log("LOGIN:", data);
-
     if (!data.access_token) {
-      alert("Login failed ❌");
+      alert("Invalid email or password ❌");
       return;
     }
 
@@ -101,7 +94,7 @@ function App() {
   // ✅ BOOK RIDE
   async function bookRide() {
     if (!token) {
-      alert("Login first ❌");
+      alert("Please login first ❌");
       return;
     }
 
@@ -130,91 +123,135 @@ function App() {
   }
 
   // ✅ UI
-  return React.createElement("div", { style: styles.container }, [
+  return (
+    React.createElement("div", { className: "container" }, [
 
-    // HEADER
-    React.createElement("div", { style: styles.header }, [
-      React.createElement("h1", {}, "SafeRideSA 🚖"),
+      // ✅ HEADER
+      React.createElement("div", { className: "header" }, [
+        React.createElement("h1", {}, "SafeRideSA 🚖"),
 
-      token && React.createElement("div", {}, [
-        React.createElement("span", {}, "Logged in: " + userEmail),
-        React.createElement("button", { onClick: logout, style: styles.logout }, "Logout")
-      ])
-    ]),
+        token && React.createElement("div", { className: "user" }, [
+          React.createElement("span", {}, userEmail),
+          React.createElement("button", { onClick: logout }, "Logout")
+        ])
+      ]),
 
-    // LOGIN
-    !token && React.createElement("div", { style: styles.card }, [
-      React.createElement("h2", {}, "Login / Sign Up"),
-      React.createElement("input", {
-        placeholder: "Email",
-        onChange: e => setEmail(e.target.value)
-      }),
-      React.createElement("input", {
-        placeholder: "Password",
-        type: "password",
-        onChange: e => setPassword(e.target.value)
-      }),
-      React.createElement("button", { onClick: signup }, "Sign Up"),
-      React.createElement("button", { onClick: login }, "Login")
-    ]),
+      // ✅ LOGIN / SIGNUP
+      !token && React.createElement("div", { className: "card" }, [
+        React.createElement("h2", {}, "Login or Sign Up"),
 
-    // DASHBOARD
-    token && React.createElement("div", { style: styles.card }, [
-      React.createElement("h2", {}, "Book Ride"),
+        React.createElement("input", {
+          placeholder: "Email",
+          onChange: e => setEmail(e.target.value)
+        }),
 
-      React.createElement("input", {
-        placeholder: "Pickup",
-        onChange: e => setPickup(e.target.value)
-      }),
+        React.createElement("input", {
+          placeholder: "Password",
+          type: "password",
+          onChange: e => setPassword(e.target.value)
+        }),
 
-      React.createElement("input", {
-        placeholder: "Dropoff",
-        onChange: e => setDropoff(e.target.value)
-      }),
+        React.createElement("button", { onClick: login }, "Login"),
+        React.createElement("button", { onClick: signup }, "Sign Up")
+      ]),
 
-      React.createElement("button", { onClick: bookRide }, "Book Ride"),
+      // ✅ DASHBOARD (when logged in)
+      token && React.createElement("div", { className: "card" }, [
+        React.createElement("h2", {}, "Book a Ride"),
 
-      React.createElement("h3", {}, "My Trips"),
-      React.createElement("button", { onClick: loadTrips }, "Load Trips"),
+        React.createElement("input", {
+          placeholder: "Pickup location",
+          onChange: e => setPickup(e.target.value)
+        }),
 
-      React.createElement(
-        "ul",
-        {},
-        trips.map((trip, i) =>
-          React.createElement("li", { key: i },
-            `${trip.pickup} → ${trip.dropoff}`
+        React.createElement("input", {
+          placeholder: "Dropoff location",
+          onChange: e => setDropoff(e.target.value)
+        }),
+
+        React.createElement("button", { onClick: bookRide }, "Book Ride"),
+
+        React.createElement("h3", {}, "My Trips"),
+        React.createElement("button", { onClick: loadTrips }, "Refresh Trips"),
+
+        React.createElement(
+          "div",
+          {},
+          trips.map((trip, index) =>
+            React.createElement(
+              "div",
+              { key: index, className: "trip" },
+              `${trip.pickup} → ${trip.dropoff}`
+            )
           )
         )
-      )
+      ])
     ])
-  ]);
+  );
 }
 
-// ✅ STYLES
-const styles = {
-  container: {
-    padding: "20px",
-    fontFamily: "Arial",
-    background: "#f5f5f5",
-    minHeight: "100vh"
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between"
-  },
-  card: {
-    background: "white",
-    padding: "20px",
-    marginTop: "20px",
-    borderRadius: "10px"
-  },
-  logout: {
-    marginLeft: "10px",
-    background: "red",
-    color: "white"
-  }
-};
+// ✅ MODERN STYLING
+const style = document.createElement("style");
+style.innerHTML = `
+.container {
+  max-width: 500px;
+  margin: auto;
+  padding: 20px;
+}
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user {
+  display: flex;
+  gap: 10px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #2d8cff;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1f6fe0;
+}
+
+.trip {
+  background: #f0f4ff;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+`;
+document.head.appendChild(style);
+
+// ✅ RENDER APP
 createRoot(document.getElementById("app")).render(
   React.createElement(App)
 );
