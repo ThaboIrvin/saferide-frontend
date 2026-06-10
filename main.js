@@ -14,9 +14,8 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [trips, setTrips] = useState([]);
 
-  // ✅ Signup
   async function signup() {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -25,10 +24,9 @@ function App() {
       body: JSON.stringify({ email, password })
     });
 
-    alert("Signup successful ✅");
+    alert("Signup ✅");
   }
 
-  // ✅ Login
   async function login() {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
@@ -40,16 +38,16 @@ function App() {
     });
 
     const data = await res.json();
-
     localStorage.setItem("token", data.access_token);
     setToken(data.access_token);
 
-    alert("Logged in ✅");
+    alert("Login ✅");
   }
 
-  // ✅ Book Ride
   async function bookRide() {
-    const res = await fetch(`${API}/trips`, {
+    if (!token) return alert("Login first ❌");
+
+    await fetch(`${API}/trips`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,11 +56,9 @@ function App() {
       body: JSON.stringify({ pickup, dropoff })
     });
 
-    const data = await res.json();
     alert("Ride booked ✅");
   }
 
-  // ✅ Load Trips
   async function loadTrips() {
     const res = await fetch(`${API}/my-trips`, {
       headers: {
@@ -75,37 +71,52 @@ function App() {
   }
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial" }}>
-      <h1>SafeRideSA 🚖</h1>
+    React.createElement("div", { style: { padding: "20px" } }, [
+      React.createElement("h1", {}, "SafeRideSA 🚖"),
 
-      <h2>🔐 Auth</h2>
-      <input placeholder="Email" onChange={e => setEmail(e.target.value)} />
-      <input placeholder="Password" type="password" onChange={e => setPassword(e.target.value)} />
+      React.createElement("h2", {}, "Auth"),
+      React.createElement("input", {
+        placeholder: "Email",
+        onChange: e => setEmail(e.target.value)
+      }),
+      React.createElement("input", {
+        placeholder: "Password",
+        type: "password",
+        onChange: e => setPassword(e.target.value)
+      }),
 
-      <br/><br/>
-      <button onClick={signup}>Sign Up</button>
-      <button onClick={login}>Login</button>
+      React.createElement("br"),
+      React.createElement("button", { onClick: signup }, "Signup"),
+      React.createElement("button", { onClick: login }, "Login"),
 
-      <h2>🚕 Book Ride</h2>
-      <input placeholder="Pickup" onChange={e => setPickup(e.target.value)} />
-      <input placeholder="Dropoff" onChange={e => setDropoff(e.target.value)} />
+      React.createElement("h2", {}, "Book Ride"),
+      React.createElement("input", {
+        placeholder: "Pickup",
+        onChange: e => setPickup(e.target.value)
+      }),
+      React.createElement("input", {
+        placeholder: "Dropoff",
+        onChange: e => setDropoff(e.target.value)
+      }),
+      React.createElement("button", { onClick: bookRide }, "Book"),
 
-      <br/><br/>
-      <button onClick={bookRide}>Book Ride</button>
+      React.createElement("h2", {}, "My Trips"),
+      React.createElement("button", { onClick: loadTrips }, "Load Trips"),
 
-      <h2>📋 My Trips</h2>
-      <button onClick={loadTrips}>Load My Trips</button>
-
-      <ul>
-        {trips.map((trip, i) => (
-          <li key={i}>
-            {trip.pickup} → {trip.dropoff}
-          </li>
-        ))}
-      </ul>
-    </div>
+      React.createElement(
+        "ul",
+        {},
+        trips.map((trip, i) =>
+          React.createElement(
+            "li",
+            { key: i },
+            `${trip.pickup} → ${trip.dropoff}`
+          )
+        )
+      )
+    ])
   );
 }
 
-createRoot(document.getElementById("app")).render(<App />);
-`
+createRoot(document.getElementById("app")).render(React.createElement(App));
+``
