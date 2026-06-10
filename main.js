@@ -2,7 +2,6 @@ import React, { useState } from "https://esm.sh/react";
 import { createRoot } from "https://esm.sh/react-dom/client";
 
 const API = "https://saferide-backend-yqxz.onrender.com";
-
 const SUPABASE_URL = "https://elzqihigxkravlpxsaqo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Kqgqr2VHU9jXf24L-sU9Ew_MVOIZQc7";
 
@@ -12,65 +11,60 @@ function App() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const [token, setToken] = useState(localStorage.getItem("token"));
+  const [userEmail, setUserEmail] = useState("");
   const [trips, setTrips] = useState([]);
 
-  // ✅ SIGNUP (FIXED)
+  // ✅ SIGN UP
   async function signup() {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY
-        },
-        body: JSON.stringify({ email, password })
-      });
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_KEY
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      console.log("Signup response:", data);
-
-      if (data.error) {
-        alert("Signup failed ❌: " + data.error.message);
-        return;
-      }
-
+    if (data.error) {
+      alert("Signup failed ❌: " + data.error.message);
+    } else {
       alert("Signup successful ✅");
-    } catch (err) {
-      console.error(err);
-      alert("Signup error ❌");
     }
   }
 
-  // ✅ LOGIN (FIXED)
+  // ✅ LOGIN
   async function login() {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_KEY
-        },
-        body: JSON.stringify({ email, password })
-      });
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_KEY
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      console.log("Login response:", data);
-
-      if (data.error) {
-        alert("Login failed ❌: " + data.error.message);
-        return;
-      }
-
-      localStorage.setItem("token", data.access_token);
-      setToken(data.access_token);
-
-      alert("Login successful ✅");
-    } catch (err) {
-      console.error(err);
-      alert("Login error ❌");
+    if (data.error) {
+      alert("Login failed ❌: " + data.error.message);
+      return;
     }
+
+    localStorage.setItem("token", data.access_token);
+    setToken(data.access_token);
+    setUserEmail(email);
+
+    alert("Login successful ✅");
+  }
+
+  // ✅ LOGOUT
+  function logout() {
+    localStorage.removeItem("token");
+    setToken(null);
+    setUserEmail("");
+    setTrips([]);
   }
 
   // ✅ BOOK RIDE
@@ -80,111 +74,133 @@ function App() {
       return;
     }
 
-    try {
-      const res = await fetch(`${API}/trips`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ pickup, dropoff })
-      });
+    const res = await fetch(`${API}/trips`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ pickup, dropoff })
+    });
 
-      const data = await res.json();
-      console.log("Trip response:", data);
+    const data = await res.json();
+    console.log("Trip:", data);
 
-      alert("Ride booked ✅");
-    } catch (err) {
-      console.error(err);
-      alert("Booking failed ❌");
-    }
+    alert("Ride booked ✅");
   }
 
   // ✅ LOAD TRIPS
   async function loadTrips() {
     if (!token) {
-      alert("Login first ❌");
+      alert("Please login first ❌");
       return;
     }
 
-    try {
-      const res = await fetch(`${API}/my-trips`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+    const res = await fetch(`${API}/my-trips`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
-      const data = await res.json();
-
-      console.log("Trips:", data);
-
-      setTrips(data);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load trips ❌");
-    }
+    const data = await res.json();
+    setTrips(data);
   }
 
-  return (
-    React.createElement("div", { style: { padding: "20px", fontFamily: "Arial" } }, [
+  // ✅ UI RENDER
+  return React.createElement("div", { style: styles.container }, [
 
+    // HEADER
+    React.createElement("div", { style: styles.header }, [
       React.createElement("h1", {}, "SafeRideSA 🚖"),
 
-      React.createElement("h2", {}, "🔐 Auth"),
+      token && React.createElement("div", {}, [
+        React.createElement("span", {}, "Logged in: " + userEmail),
+        React.createElement("button", { onClick: logout, style: styles.logout }, "Logout")
+      ])
+    ]),
+
+    // AUTH SECTION
+    !token && React.createElement("div", { style: styles.card }, [
+      React.createElement("h2", {}, "Login / Sign Up"),
 
       React.createElement("input", {
         placeholder: "Email",
+        value: email,
         onChange: e => setEmail(e.target.value)
       }),
 
       React.createElement("input", {
         placeholder: "Password",
         type: "password",
+        value: password,
         onChange: e => setPassword(e.target.value)
       }),
 
-      React.createElement("br"),
-      React.createElement("br"),
+      React.createElement("div", {}, [
+        React.createElement("button", { onClick: signup }, "Sign Up"),
+        React.createElement("button", { onClick: login }, "Login")
+      ])
+    ]),
 
-      React.createElement("button", { onClick: signup }, "Sign Up"),
-      React.createElement("button", { onClick: login }, "Login"),
-
-      React.createElement("h2", {}, "🚕 Book Ride"),
+    // DASHBOARD
+    token && React.createElement("div", { style: styles.card }, [
+      React.createElement("h2", {}, "Book a Ride"),
 
       React.createElement("input", {
-        placeholder: "Pickup",
+        placeholder: "Pickup location",
+        value: pickup,
         onChange: e => setPickup(e.target.value)
       }),
 
       React.createElement("input", {
-        placeholder: "Dropoff",
+        placeholder: "Dropoff location",
+        value: dropoff,
         onChange: e => setDropoff(e.target.value)
       }),
 
-      React.createElement("br"),
-      React.createElement("br"),
-
       React.createElement("button", { onClick: bookRide }, "Book Ride"),
 
-      React.createElement("h2", {}, "📋 My Trips"),
+      React.createElement("h3", {}, "My Trips"),
 
       React.createElement("button", { onClick: loadTrips }, "Load Trips"),
 
-      React.createElement(
-        "ul",
-        {},
-        trips.map((trip, i) =>
-          React.createElement(
-            "li",
-            { key: i },
+      React.createElement("ul", {},
+        trips.map((trip, index) =>
+          React.createElement("li", { key: index },
             `${trip.pickup} → ${trip.dropoff}`
           )
         )
       )
-
     ])
-  );
+  ]);
 }
+
+// ✅ STYLES
+const styles = {
+  container: {
+    fontFamily: "Arial",
+    padding: "20px",
+    backgroundColor: "#f5f5f5",
+    minHeight: "100vh"
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center"
+  },
+  card: {
+    backgroundColor: "white",
+    padding: "20px",
+    marginTop: "20px",
+    borderRadius: "10px",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)"
+  },
+  logout: {
+    marginLeft: "10px",
+    backgroundColor: "red",
+    color: "white"
+  }
+};
 
 createRoot(document.getElementById("app")).render(
   React.createElement(App)
