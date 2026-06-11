@@ -10,6 +10,8 @@ function App() {
   const [error, setError] = useState("");
   const [trips, setTrips] = useState([]);
 
+  const [rideType, setRideType] = useState("UberX");
+
   const token = localStorage.getItem("token");
 
   // ✅ LOGOUT
@@ -30,7 +32,7 @@ function App() {
     return [data[0].lon, data[0].lat];
   }
 
-  // ✅ OSRM ROUTE (FRONTEND)
+  // ✅ GET ROUTE
   async function getRoute(pickup, dropoff) {
     const start = await getCoords(pickup);
     const end = await getCoords(dropoff);
@@ -53,7 +55,24 @@ function App() {
     };
   }
 
-  // ✅ MAIN FUNCTION (NOW WORKS GUARANTEED)
+  // ✅ PRICING PER RIDE TYPE
+  function calculateFare(distance, eta) {
+    const pricing = {
+      UberX: { base: 25, perKm: 12, perMin: 1.5 },
+      XL: { base: 35, perKm: 15, perMin: 2 },
+      Premium: { base: 50, perKm: 20, perMin: 3 }
+    };
+
+    const selected = pricing[rideType];
+
+    return (
+      selected.base +
+      distance * selected.perKm +
+      eta * selected.perMin
+    ).toFixed(2);
+  }
+
+  // ✅ MAIN
   async function handleTrip() {
     if (!pickup || !dropoff) {
       setError("Enter both locations ❌");
@@ -65,16 +84,23 @@ function App() {
     try {
       const route = await getRoute(pickup, dropoff);
 
+      const distance = parseFloat(route.distance);
+      const eta = parseFloat(route.eta);
+
+      const price = calculateFare(distance, eta);
+
       const newTrip = {
         pickup,
         dropoff,
         distance: route.distance,
-        eta: route.eta
+        eta: route.eta,
+        price,
+        rideType
       };
 
       setTrip(newTrip);
 
-      // ✅ SAVE TO BACKEND
+      // ✅ SAVE
       await fetch(`${API}/trips`, {
         method: "POST",
         headers: {
@@ -86,7 +112,7 @@ function App() {
 
     } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to calculate trip ❌");
+      setError(err.message);
     }
   }
 
@@ -102,68 +128,83 @@ function App() {
     setTrips(data);
   }
 
-  return (
-    React.createElement("div", { className: "container" }, [
+  return React.createElement("div", { className: "container" }, [
 
-      // HEADER
-      React.createElement("div", { className: "header" }, [
-        React.createElement("h1", {}, "SafeRideSA 🚖"),
-        React.createElement("button", {
-          className: "logout",
-          onClick: logout
-        }, "Logout")
-      ]),
-
-      // PICKUP CARD
-      React.createElement("div", { className: "card" }, [
-        React.createElement("label", {}, "Pickup"),
-        React.createElement("input", {
-          value: pickup,
-          onChange: e => setPickup(e.target.value)
-        })
-      ]),
-
-      // ARROW
-      React.createElement("div", { className: "arrow" }, "↓"),
-
-      // DROPOFF CARD
-      React.createElement("div", { className: "card" }, [
-        React.createElement("label", {}, "Dropoff"),
-        React.createElement("input", {
-          value: dropoff,
-          onChange: e => setDropoff(e.target.value)
-        })
-      ]),
-
-      // BUTTON
+    // HEADER
+    React.createElement("div", { className: "header" }, [
+      React.createElement("h1", {}, "SafeRideSA 🚖"),
       React.createElement("button", {
-        className: "main-btn",
-        onClick: handleTrip
-      }, "Get Trip"),
+        className: "logout",
+        onClick: logout
+      }, "Logout")
+    ]),
 
-      error && React.createElement("p", { className: "error" }, error),
+    // PICKUP
+    React.createElement("div", { className: "card" }, [
+      React.createElement("label", {}, "Pickup"),
+      React.createElement("input", {
+        value: pickup,
+        onChange: e => setPickup(e.target.value)
+      })
+    ]),
 
-      // RESULT
-      trip && React.createElement("div", { className: "result" }, [
-        React.createElement("p", {}, `Distance: ${trip.distance} km`),
-        React.createElement("p", {}, `ETA: ${trip.eta} mins`)
-      ]),
+    // ARROW
+    React.createElement("div", { className: "arrow" }, "↓"),
 
-      React.createElement("button", {
-        className: "secondary",
-        onClick: loadTrips
-      }, "Load My Trips"),
+    // DROPOFF
+    React.createElement("div", { className: "card" }, [
+      React.createElement("label", {}, "Dropoff"),
+      React.createElement("input", {
+        value: dropoff,
+        onChange: e => setDropoff(e.target.value)
+      })
+    ]),
 
-      trips.map((t, i) =>
-        React.createElement("div", { key: i, className: "trip" },
-          `${t.pickup} → ${t.dropoff} (${t.distance} km)`
+    // ✅ RIDE TYPES
+    React.createElement("div", { className: "ride-types" },
+      ["UberX", "XL", "Premium"].map(type =>
+        React.createElement(
+          "div",
+          {
+            key: type,
+            className: `ride-card ${rideType === type ? "active" : ""}`,
+            onClick: () => setRideType(type)
+          },
+          type
         )
       )
-    ])
-  );
+    ),
+
+    // BUTTON
+    React.createElement("button", {
+      className: "btn",
+      onClick: handleTrip
+    }, "Get Trip"),
+
+    error && React.createElement("p", { className: "error" }, error),
+
+    // RESULT
+    trip && React.createElement("div", { className: "result" }, [
+      React.createElement("p", {}, `Distance: ${trip.distance} km`),
+      React.createElement("p", {}, `ETA: ${trip.eta} mins`),
+      React.createElement("p", {}, `Ride: ${trip.rideType}`),
+      React.createElement("p", { className: "price" }, `Fare: R${trip.price}`)
+    ]),
+
+    React.createElement("button", {
+      className: "btn",
+      onClick: loadTrips
+    }, "Load My Trips"),
+
+    trips.map((t, i) =>
+      React.createElement("div", { key: i, className: "trip" },
+        `${t.rideType} | ${t.pickup} → ${t.dropoff} | R${t.price}`
+      )
+    )
+  ]);
 }
 
-// ✅ STYLE
+/* ✅ STYLES */
 const style = document.createElement("style");
 style.innerHTML = `
 .container {
@@ -194,21 +235,23 @@ input {
   border: none;
 }
 
-.main-btn {
+.btn {
   width: 100%;
-  margin-top: 20px;
+  margin-top: 15px;
   padding: 14px;
   background: #2d8cff;
-  border: none;
   border-radius: 12px;
+  border: none;
+  color: white;
+  font-weight: bold;
 }
 
 .logout {
   background: red;
-  color: white;
   border: none;
   padding: 8px;
   border-radius: 6px;
+  color: white;
 }
 
 .arrow {
@@ -218,11 +261,38 @@ input {
   color: #2d8cff;
 }
 
+/* ✅ RIDE TYPES */
+.ride-types {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.ride-card {
+  flex: 1;
+  background: #111827;
+  padding: 10px;
+  text-align: center;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ride-card.active {
+  background: #2d8cff;
+}
+
+/* ✅ RESULT */
 .result {
   background: #020617;
   padding: 15px;
   margin-top: 20px;
   border-radius: 10px;
+}
+
+.price {
+  color: #22c55e;
+  font-weight: bold;
+  margin-top: 10px;
 }
 
 .trip {
@@ -236,6 +306,7 @@ input {
   color: red;
 }
 `;
+
 document.head.appendChild(style);
 
 createRoot(document.getElementById("app")).render(
