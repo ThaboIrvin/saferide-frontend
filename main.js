@@ -197,9 +197,12 @@ function App() {
     }, "Load My Trips"),
 
     trips.map((t, i) =>
-      React.createElement("div", { key: i, className: "trip" },
-        `${t.rideType} | ${t.pickup} → ${t.dropoff} | R${t.price}`
-      )
+    React.createElement("div", { key: i, className: "trip" },
+
+        `${t.rideType || "UberX"} | 
+        ${t.pickup} → ${t.dropoff} | 
+        R${t.price || "0.00"}`
+    )
     )
   ]);
 }
