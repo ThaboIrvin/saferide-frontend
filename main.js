@@ -1,4 +1,4 @@
-import React, { useState } from "https://esm.sh/react";
+import React, { useState, useEffect } from "https://esm.sh/react";
 import { createRoot } from "https://esm.sh/react-dom/client";
 
 const API = "https://saferide-backend-yqxz.onrender.com";
@@ -9,15 +9,27 @@ function App() {
   const [trip, setTrip] = useState(null);
   const [trips, setTrips] = useState([]);
   const [error, setError] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
 
   const token = localStorage.getItem("token");
 
-  // ✅ BIG LOGOUT BUTTON
+  // ✅ LOGOUT (FIXED PROPERLY)
   function logout() {
     localStorage.removeItem("token");
-    location.reload();
+    setIsLoggedIn(false);
+    setTrips([]);
+    setTrip(null);
+    alert("Logged out ✅");
   }
 
+  // ✅ SIMPLE CHECK
+  useEffect(() => {
+    if (!token) {
+      setError("You are not logged in ❌");
+    }
+  }, []);
+
+  // ✅ GEOCODE
   async function getCoords(place) {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}&limit=1`
@@ -29,6 +41,7 @@ function App() {
     return [data[0].lon, data[0].lat];
   }
 
+  // ✅ ROUTE
   async function getRoute(pickup, dropoff) {
     const start = await getCoords(pickup);
     const end = await getCoords(dropoff);
@@ -51,10 +64,7 @@ function App() {
     };
   }
 
-  function getPrice(distance, eta) {
-    return (25 + distance * 12 + eta * 1.5).toFixed(2);
-  }
-
+  // ✅ CREATE TRIP
   async function handleTrip() {
     try {
       const route = await getRoute(pickup, dropoff);
@@ -64,7 +74,7 @@ function App() {
         dropoff,
         distance: route.distance,
         eta: route.eta,
-        price: getPrice(route.distance, route.eta),
+        price: (25 + route.distance * 12 + route.eta * 1.5).toFixed(2),
         rideType: "UberX"
       };
 
@@ -84,9 +94,12 @@ function App() {
     }
   }
 
-  // ✅ FIXED LOAD
+  // ✅ LOAD TRIPS (FULL FIX)
   async function loadTrips() {
-    setError("");
+    if (!token) {
+      setError("Login required ❌");
+      return;
+    }
 
     try {
       const res = await fetch(`${API}/my-trips`, {
@@ -95,9 +108,13 @@ function App() {
         }
       });
 
+      if (!res.ok) {
+        throw new Error("Server error");
+      }
+
       const data = await res.json();
 
-      console.log("TRIPS:", data);
+      console.log("Trips:", data);
 
       setTrips(Array.isArray(data) ? data : []);
 
@@ -110,16 +127,18 @@ function App() {
 
   return React.createElement("div", { className: "container" }, [
 
-    // HEADER
+    // ✅ HEADER
     React.createElement("div", { className: "header" }, [
       React.createElement("h1", {}, "SafeRideSA 🚖"),
-      React.createElement("button", {
-        className: "logout",
-        onClick: logout
-      }, "Logout")
+
+      isLoggedIn &&
+        React.createElement("button", {
+          className: "logout",
+          onClick: logout
+        }, "Logout")
     ]),
 
-    // PICKUP
+    // INPUTS
     React.createElement("div", { className: "card" },
       React.createElement("input", {
         placeholder: "Pickup",
@@ -128,7 +147,6 @@ function App() {
       })
     ),
 
-    // DROPOFF
     React.createElement("div", { className: "card" },
       React.createElement("input", {
         placeholder: "Dropoff",
@@ -155,16 +173,15 @@ function App() {
 
     error && React.createElement("p", { className: "error" }, error),
 
-    // ✅ SAFE LIST
     trips.map((t, i) =>
       React.createElement("div", { key: i, className: "trip" },
-        `${t.rideType || "UberX"} | ${t.pickup} → ${t.dropoff} | R${t.price || "0.00"}`
+        `${t.rideType || "UberX"} | ${t.pickup} → ${t.dropoff} | R${t.price || "0"}`
       )
     )
   ]);
 }
 
-// ✅ STYLES (BIG LOGOUT)
+// ✅ STYLES
 const style = document.createElement("style");
 style.innerHTML = `
 .container {
@@ -174,9 +191,23 @@ style.innerHTML = `
   color: white;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ✅ BIGGER LOGOUT */
+.logout {
+  background: red;
+  color: white;
+  padding: 14px 20px;
+  font-size: 16px;
+  border-radius: 10px;
+}
+
 .card {
   background: #0f172a;
-  padding: 12px;
+  padding: 10px;
   margin-top: 10px;
 }
 
@@ -193,14 +224,6 @@ input {
   color: white;
 }
 
-.logout {
-  background: red;
-  padding: 12px 20px;
-  font-size: 18px;
-  border-radius: 8px;
-  color: white;
-}
-
 .result {
   background: #020617;
   padding: 10px;
@@ -209,8 +232,8 @@ input {
 
 .trip {
   background: #111827;
-  margin-top: 10px;
   padding: 10px;
+  margin-top: 10px;
 }
 
 .error {
