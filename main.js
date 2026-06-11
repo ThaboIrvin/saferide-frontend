@@ -117,7 +117,8 @@ function App() {
   }
 
   // ✅ LOAD HISTORY
-  async function loadTrips() {
+ async function loadTrips() {
+  try {
     const res = await fetch(`${API}/my-trips`, {
       headers: {
         Authorization: `Bearer ${token}`
@@ -125,8 +126,24 @@ function App() {
     });
 
     const data = await res.json();
+
+    console.log("TRIPS:", data);
+
+    // ✅ Ensure it is always an array
+    if (!Array.isArray(data)) {
+      setTrips([]);
+      setError("Failed to load trips ❌");
+      return;
+    }
+
     setTrips(data);
+
+  } catch (err) {
+    console.error(err);
+    setTrips([]);
+    setError("Error loading trips ❌");
   }
+}
 
   return React.createElement("div", { className: "container" }, [
 
